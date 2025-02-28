@@ -11,5 +11,8 @@ export default {
 	theme: {
 		extend: {}
 	},
-	plugins: [typography, forms, containerQueries, aspectRatio, daisyui]
+	plugins: [typography, forms, containerQueries, aspectRatio, daisyui],
+	daisyui: {
+		logs: false
+	}
 } satisfies Config;

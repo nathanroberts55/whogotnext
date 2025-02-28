@@ -21,16 +21,16 @@
 				tabindex="0"
 				class="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
 			>
-				<li><a>Item 1</a></li>
-				<li><a>Item 3</a></li>
+				<li><a href="/host">Host</a></li>
+				<li><a href="/join">Join</a></li>
 			</ul>
 		</div>
-		<a class="btn btn-ghost text-xl">Who Got Next?</a>
+		<a href="/" class="btn btn-ghost text-xl">Who Got Next?</a>
 	</div>
 	<div class="navbar-center hidden lg:flex">
 		<ul class="menu menu-horizontal px-1">
-			<li><a>Host</a></li>
-			<li><a>Join</a></li>
+			<li><a href="/host">Host</a></li>
+			<li><a href="/join">Join</a></li>
 		</ul>
 	</div>
 	<div class="navbar-end">
