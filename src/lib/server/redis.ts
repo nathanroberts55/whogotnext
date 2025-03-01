@@ -1,8 +1,12 @@
 import { Redis } from 'ioredis';
-import { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_TLS } from '$env/static/private';
+import { 
+    AZURE_CACHE_FOR_REDIS_HOST_NAME, 
+    AZURE_CACHE_FOR_REDIS_ACCESS_KEY,
+    REDIS_TLS 
+} from '$env/static/private';
 import { dev } from '$app/environment';
 
-if (!REDIS_HOST || !REDIS_PORT || !REDIS_PASSWORD) {
+if (!AZURE_CACHE_FOR_REDIS_HOST_NAME || !AZURE_CACHE_FOR_REDIS_ACCESS_KEY) {
     throw new Error('Required Redis environment variables are not set');
 }
 
@@ -11,13 +15,16 @@ let redisClient: Redis | null = null;
 export async function getRedisClient(): Promise<Redis> {
     if (!redisClient || !redisClient.status || redisClient.status === 'end') {
         console.log('Creating new Redis connection...');
-        console.log(`Connecting to Redis at ${REDIS_HOST}:${REDIS_PORT} with TLS=${REDIS_TLS}`);
         
         try {
             const config = {
-                host: REDIS_HOST,
-                port: Number(REDIS_PORT),
-                password: REDIS_PASSWORD,
+                host: AZURE_CACHE_FOR_REDIS_HOST_NAME,
+                port: dev ? 6379 : 6380, // Use 6380 for Azure Cache for Redis
+                password: AZURE_CACHE_FOR_REDIS_ACCESS_KEY,
+                tls: !dev || REDIS_TLS === 'true' ? {
+                    servername: AZURE_CACHE_FOR_REDIS_HOST_NAME,
+                    rejectUnauthorized: !dev // Only false in development
+                } : undefined,
                 retryStrategy: (times: number) => {
                     const delay = Math.min(times * 50, 2000);
                     console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`);
@@ -26,10 +33,6 @@ export async function getRedisClient(): Promise<Redis> {
                 maxRetriesPerRequest: 3,
                 enableReadyCheck: true,
                 connectTimeout: 10000, // 10 seconds
-                tls: REDIS_TLS === 'true' ? {
-                    servername: REDIS_HOST,
-                    rejectUnauthorized: false // Only if using self-signed certificates
-                } : undefined
             };
 
             redisClient = new Redis(config);

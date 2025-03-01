@@ -36,6 +36,8 @@ jobs:
           REDIS_HOST: ${{ secrets.REDIS_HOST }}
           REDIS_PORT: ${{ secrets.REDIS_PORT }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          AZURE_CACHE_FOR_REDIS_HOST_NAME: ${{ secrets.AZURE_CACHE_FOR_REDIS_HOST_NAME }}
+          AZURE_CACHE_FOR_REDIS_ACCESS_KEY: ${{ secrets.AZURE_CACHE_FOR_REDIS_ACCESS_KEY }}
           REDIS_TLS: ${{ secrets.REDIS_TLS }}
 
   close_pull_request_job:
