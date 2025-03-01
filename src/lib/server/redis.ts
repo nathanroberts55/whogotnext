@@ -11,6 +11,8 @@ let redisClient: Redis | null = null;
 export async function getRedisClient(): Promise<Redis> {
     if (!redisClient || !redisClient.status || redisClient.status === 'end') {
         console.log('Creating new Redis connection...');
+        console.log(`Connecting to Redis at ${REDIS_HOST}:${REDIS_PORT} with TLS=${REDIS_TLS}`);
+        
         try {
             const config = {
                 host: REDIS_HOST,
@@ -18,46 +20,45 @@ export async function getRedisClient(): Promise<Redis> {
                 password: REDIS_PASSWORD,
                 retryStrategy: (times: number) => {
                     const delay = Math.min(times * 50, 2000);
+                    console.log(`Redis connection attempt ${times}, retrying in ${delay}ms`);
                     return delay;
                 },
                 maxRetriesPerRequest: 3,
-                enableReadyCheck: true
+                enableReadyCheck: true,
+                connectTimeout: 10000, // 10 seconds
+                tls: REDIS_TLS === 'true' ? {
+                    servername: REDIS_HOST,
+                    rejectUnauthorized: false // Only if using self-signed certificates
+                } : undefined
             };
-
-            // Add TLS configuration for production
-            if (REDIS_TLS === 'true') {
-                Object.assign(config, {
-                    tls: {
-                        servername: REDIS_HOST
-                    }
-                });
-            }
 
             redisClient = new Redis(config);
 
             redisClient.on('error', (error) => {
-                console.error('Redis Client error:', error);
+                console.error('Redis connection error:', error);
             });
 
             redisClient.on('connect', () => {
-                console.log('Redis client connected to server.');
+                console.log('Redis client connected successfully');
             });
 
-            // Wait for ready state
-            await new Promise((resolve, reject) => {
-                redisClient!.once('ready', resolve);
-                redisClient!.once('error', reject);
-            });
+            // Wait for ready state with timeout
+            await Promise.race([
+                new Promise((resolve, reject) => {
+                    redisClient!.once('ready', resolve);
+                    redisClient!.once('error', reject);
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Redis connection timeout')), 10000)
+                )
+            ]);
 
-        } catch (error: unknown) {
-            console.error('Error connecting to Redis:', error);
+        } catch (error) {
+            console.error('Failed to connect to Redis:', error);
             redisClient = null;
-            throw new Error("Failed to connect to Redis: " + (error instanceof Error ? error.message : String(error)));
+            throw error;
         }
     }
 
-    if (!redisClient) {
-        throw new Error("Redis client is not initialized.");
-    }
     return redisClient;
 }
