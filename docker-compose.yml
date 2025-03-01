@@ -1,6 +1,9 @@
 services:
   redis:
     image: redis:latest
+    command: redis-server --requirepass your_password
     ports:
       - '6379:6379'
+    environment:
+      - REDIS_PASSWORD=your_password
     restart: always
