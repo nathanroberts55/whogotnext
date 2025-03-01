@@ -13,6 +13,7 @@ export default {
 	},
 	plugins: [typography, forms, containerQueries, aspectRatio, daisyui],
 	daisyui: {
-		logs: false
+		themes:["luxury"],
+		logs: false,
 	}
 } satisfies Config;
