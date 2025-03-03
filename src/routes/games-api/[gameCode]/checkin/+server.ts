@@ -1,10 +1,11 @@
 // src/routes/games-api/[gameCode]/checkin/+server.ts
-import { json, error } from '@sveltejs/kit';
+import { json, error, redirect } from '@sveltejs/kit';
 import { getRedisClient } from '$lib/server/redis';
-import { v4 as uuidv4 } from 'uuid'; // For generating unique player IDs
+import { v4 as uuidv4 } from 'uuid';
+import type { Player, GameData } from '$lib/types/game';
 
 /** @type {import('./$types').RequestHandler} */
-export async function POST({ params, request, cookies }) {  // Add cookies to destructuring
+export async function POST({ params, request, cookies }) {
     let redis;
     const gameCode = params.gameCode;
 
@@ -13,38 +14,60 @@ export async function POST({ params, request, cookies }) {  // Add cookies to de
     }
 
     try {
+        const existingPlayerId = cookies.get(`player_id_${gameCode}`);
         redis = await getRedisClient();
-    } catch (redisConnectionError) {
-        console.error("Redis connection failed in check-in API:", redisConnectionError);
-        throw error(500, { message: 'Failed to connect to Redis.' });
-    }
-
-    try {
         const gameDataString = await redis.get(gameCode);
+        
         if (!gameDataString) {
             throw error(404, { message: 'Game not found.' });
         }
-        const gameData = JSON.parse(gameDataString);
 
+        const gameData = JSON.parse(gameDataString);
         if (!gameData.playersCheckedIn) {
-            gameData.playersCheckedIn = []; // Initialize if it's missing (for robustness)
+            gameData.playersCheckedIn = [];
+        }
+
+        // If player already has a cookie, check if they exist in the game
+        if (existingPlayerId) {
+            const existingPlayer = gameData.playersCheckedIn.find(
+                (player: Player) => player.id === existingPlayerId
+            );
+
+            if (existingPlayer) {
+                // Player already checked in, return game data
+                return json({ 
+                    success: true,
+                    gameCode,
+                    message: 'Already checked in',
+                    gameData
+                });
+            }
         }
 
         const requestData = await request.json();
-        const playerName = requestData.playerName; // Assuming client sends playerName in request body
+        const playerName = requestData.playerName;
 
         if (!playerName || typeof playerName !== 'string' || playerName.trim() === '') {
             throw error(400, { message: 'Player name is required.' });
         }
 
+        // Check if player name already exists in this game
+        const playerNameExists = gameData.playersCheckedIn.some(
+            (player: Player) => player.name.toLowerCase() === playerName.trim().toLowerCase()
+        );
+
+        if (playerNameExists) {
+            throw error(400, { message: 'A player with this name has already checked in.' });
+        }
+
         const player = {
-            id: uuidv4(), // Generate unique player ID using UUID
+            id: existingPlayerId || uuidv4(),
             name: playerName.trim(),
             arrivalTime: Date.now()
         };
 
         gameData.playersCheckedIn.push(player);
-        await redis.set(gameCode, JSON.stringify(gameData), 'EX', 18000); // Re-set TTL (5 hours)
+        await redis.set(gameCode, JSON.stringify(gameData), 'EX', 18000);
 
         // Set the cookie for player identification
         cookies.set(`player_id_${gameCode}`, player.id, {
@@ -52,26 +75,29 @@ export async function POST({ params, request, cookies }) {  // Add cookies to de
             maxAge: 60 * 60 * 5 // 5 hours in seconds
         });
 
-        // Updated response to include both game and player data
+        // Return success response with game data
         return json({ 
-            message: 'Check-in successful!',
-            player,
-            gameData // Include the full game data in response
-        }, { 
-            status: 201 
+            success: true,
+            gameCode,
+            message: 'Successfully checked in',
+            gameData
         });
 
     } catch (err) {
         console.error('Error during player check-in:', err);
-        if (err instanceof Error && err.message === 'Game not found.') {
-            throw error(404, { message: 'Game not found.' });
-        } else if (err instanceof Error && err.message === 'Player name is required.') {
-            throw error(400, { message: 'Player name is required.' });
+        
+        if (err instanceof Error) {
+            if (err.message === 'Game not found.') {
+                throw error(404, { message: 'Game not found.' });
+            } else if (err.message === 'Player name is required.') {
+                throw error(400, { message: 'Player name is required.' });
+            }
         }
-        throw error(500, { message: 'Failed to check player in.' }); // Generic server error
+        
+        throw error(500, { message: 'Failed to check player in.' });
     } finally {
         if (redis) {
-            redis.quit();
+            await redis.quit();
         }
     }
 }

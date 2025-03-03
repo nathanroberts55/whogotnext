@@ -69,6 +69,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Who Got Next? - Create a Game</title>
+</svelte:head>
+
 <div class="mx-auto my-auto flex flex-col">
 	<h1 class="mb-4 text-center text-4xl">Create a Game</h1>
 	<form

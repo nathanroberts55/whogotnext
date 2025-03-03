@@ -9,6 +9,9 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 
 	theme: {
+		fontFamily: {
+			display: ['Modak'],
+		},
 		extend: {}
 	},
 	plugins: [typography, forms, containerQueries, aspectRatio, daisyui],

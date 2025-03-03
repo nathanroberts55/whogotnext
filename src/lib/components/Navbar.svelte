@@ -25,12 +25,14 @@
 				<li><a href="/game/join">Join</a></li>
 			</ul>
 		</div>
-		<a href="/" class="btn btn-ghost text-xl">Who Got Next?</a>
+		<a href="/" class="font-display p-2 text-3xl"
+			><img class="w-24" src="/wgn_logo.png" alt="who got next abbreviated logo" /></a
+		>
 	</div>
 	<div class="navbar-center hidden lg:flex">
 		<ul class="menu menu-horizontal px-1">
 			<li><a href="/host/create/">Host</a></li>
-			<li><a href="/game/join">Join</a></li>
+			<li><a href="/game/join/">Join</a></li>
 		</ul>
 	</div>
 	<div class="navbar-end">

@@ -14,61 +14,43 @@
 
 		joiningGame = true;
 		errorMessage = null;
+
 		try {
 			console.log(`[${FILE_PATH}] Making POST request to /games-api/${gameCodeInput}/checkin`);
 			const response = await fetch(`/games-api/${gameCodeInput}/checkin`, {
-				// API Endpoint path
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ gameCode: gameCodeInput, playerName: nameInput }) // Send GameCode data - even if API ignores it for now
+				body: JSON.stringify({ playerName: nameInput })
 			});
+
 			console.log(`[${FILE_PATH}] Response status:`, response.status);
 
 			if (!response.ok) {
-				console.log(`[${FILE_PATH}] Response not OK, getting error details`);
 				const errorData = await response.json();
-				errorMessage =
-					errorData.message || `Failed to create game: ${response.status} ${response.statusText}`;
-				console.error(`[${FILE_PATH}] Error:`, errorMessage);
+				console.error(`[${FILE_PATH}] Error response:`, errorData);
+				errorMessage = errorData.message || 'Failed to join game';
 				return;
 			}
 
-			console.log(`[${FILE_PATH}] Parsing response data`);
 			const data = await response.json();
-			console.log(`[${FILE_PATH}] Received data:`, data);
+			console.log(`[${FILE_PATH}] Success response:`, data);
 
-			const gameCode = data.gameData.gameCode;
-			if (gameCode) {
-				console.log(`[${FILE_PATH}] Game code received:`, gameCode);
-				console.log(`[${FILE_PATH}] Attempting navigation to /game/${gameCode}`);
-				try {
-					// First invalidate all data
-					await invalidateAll();
-					// Then navigate to the new page
-					await goto(`/game/${gameCode}`, {
-						replaceState: true // This prevents adding to browser history
-					});
-					console.log(`[${FILE_PATH}] Navigation successful`);
-				} catch (navError) {
-					console.error(`[${FILE_PATH}] Navigation failed:`, navError);
-					errorMessage = 'Failed to navigate to game page';
-					joiningGame = false;
-				}
-			} else {
-				console.error(`[${FILE_PATH}] No game code in response`);
-				errorMessage = 'Game code not received from server.';
-			}
+			// Navigate to the game page
+			await goto(`/game/${data.gameCode}`);
 		} catch (error) {
-			console.error(`[${FILE_PATH}] Caught error:`, error);
-			errorMessage = `Error creating game: ${error instanceof Error ? error.message : 'Unknown error'}`;
+			console.error(`[${FILE_PATH}] Error:`, error);
+			errorMessage = `Error joining game: ${error instanceof Error ? error.message : 'Unknown error'}`;
 		} finally {
-			console.log(`[${FILE_PATH}] Form submission completed`);
-			joiningGame = false; // Re-enable button
+			joiningGame = false;
 		}
 	}
 </script>
+
+<svelte:head>
+	<title>Who Got Next? - Join a Game</title>
+</svelte:head>
 
 <div class="mx-auto my-auto flex flex-col">
 	<h1 class="mb-4 text-center text-4xl">Join a Game</h1>
